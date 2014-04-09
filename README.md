@@ -24,8 +24,6 @@ Chain any of these from an instance of `emma`:
 
 * conj
 * cons
-* realize
-* r
 * take
 * takeWhile
 * distinct
@@ -35,5 +33,7 @@ Chain any of these from an instance of `emma`:
 * interpose
 * drop
 * dropWhile
+
+Then realize your chain with `r()` or `realize()` and access it with `.coll`
 
 # Fresh paint, more to come.
