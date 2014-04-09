@@ -2,7 +2,7 @@
   "name": "emma",
   "version": "0.0.0",
   "description": "a library to facilitate javascript programming in a functional style",
-  "main": "lib/emma.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
