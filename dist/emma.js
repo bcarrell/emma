@@ -36,40 +36,28 @@ var util = {
   }
 };
 
+function addOp(context, f) {
+  context.ops.push(f);
+}
+
 /**
  * External utilities
  */
 
 // terminates chain
 function realize() {
-  // temporarily just return the collection for now,
-  // later more interesting logic
-  return this.coll; // FIXME
-}
+  var _this = this,
+      len = this.ops.length;
 
-// terminates chain
-function eq() {
-  var
-    result = [],
-    args = ArrProto.slice.apply(arguments);
-
-  if (!args.length) {
-    args.push(0);
+  for (var i = 0; i < len; i++) {
+    // realizing all previously accumulated ops
+    this.ops[i]();
   }
 
-  for (var i = 0; i < args.length; i++) {
-    result.push(this.acc[args[i]]);
-  }
+  this.ops = [];
 
-  if (result.length === 1) {
-    return result[0];
-  } else {
-    return result;
-  }
-}
+  return this;
 
-function all() {
-  return this.acc;
 }
 
 /**
@@ -77,52 +65,169 @@ function all() {
  */
 
 function conj() {
-  ArrProto.push.apply(this.coll, arguments);
+  var _this = this,
+      args = arguments;
+
+  addOp(this, function() {
+    ArrProto.push.apply(_this.coll, args);
+  });
+
   return this;
 }
 
 function cons() {
-  ArrProto.unshift.apply(this.coll, arguments);
+  var _this = this,
+      args = arguments;
+
+  addOp(this, function() {
+    ArrProto.unshift.apply(_this.coll, args);
+  });
+
   return this;
 }
 
-function take(x) {
-  this.acc.push(ArrProto.slice.call(this.coll, 0, x));
-  this.coll = ArrProto.slice.call(this.coll, x);
-  return this;
-}
+function _takeWhile(context, f) {
+  var _g = context.g,
+      xs = [],
+      coll = ArrProto.slice.call(context.coll),
+      len = coll.length,
+      next,
+      i;
 
-function takeWhile(f) {
-  var
-    coll = this.coll,
-    len = coll.length,
-    xs = [],
-    next;
-
-  for (var i = 0; i < len; i++) {
+  for (i = 0; i < len; i++) {
     next = coll[i];
-    if (next && f(next)) {
+    if (f(next, i)) {
       xs.push(next);
-    } else {
-      break;
     }
   }
 
-  this.acc.push(xs);
-  this.coll = ArrProto.slice.call(this.coll, xs.length);
+  return xs;
+}
+
+function takeWhile(f) {
+  var _this = this;
+
+  addOp(this, function() {
+    var xs = _takeWhile(_this, f);
+
+    _this.coll = xs;
+  });
+
+  return this;
+
+}
+
+function take(x) {
+  return takeWhile.call(this, function(_, i) {
+    return x >= (i + 1);
+  });
+}
+
+function dropWhile(f) {
+  var _this = this;
+
+  addOp(this, function() {
+    var xs = _takeWhile(_this, f),
+        coll = ArrProto.slice.call(_this.coll, xs.length);
+
+    _this.coll = coll;
+  });
+
+  return this;
+
+}
+
+function drop(x) {
+  return dropWhile.call(this, function(_, i) {
+    return x >= (i + 1);
+  });
+}
+
+function distinct() {
+  var _this = this;
+
+  addOp(this, function() {
+    _this.coll = ArrProto.filter.call(_this.coll, function(el, pos, self) {
+      return ArrProto.indexOf.call(self, el) === pos;
+    });
+  });
+
+  return this;
+}
+
+function filter(f) {
+  var _this = this;
+
+  addOp(this, function() {
+    _this.coll = ArrProto.filter.call(_this.coll, function(el, pos, self) {
+      return f(el);
+    });
+  });
+
+  return this;
+}
+
+function rest() {
+  var _this = this;
+
+  addOp(this, function() {
+    ArrProto.shift.call(_this.coll);
+  });
+
+  return this;
+}
+
+function interleave(xs) {
+  var _this = this;
+
+  addOp(this, function() {
+    var i,
+        coll = _this.coll,
+        len = xs.length,
+        ys = [];
+
+    for (i = 0; i < len; i++) {
+      ys.push(coll[i]);
+      ys.push(xs[i]);
+    }
+
+    _this.coll = ys;
+  });
+
+  return this;
+}
+
+function interpose(x) {
+  var _this = this;
+
+  addOp(this, function() {
+    var coll = _this.coll,
+        len = coll.length,
+        xs = [],
+        i;
+
+    for (i = 0; i < len; i++) {
+      xs.push(coll[i]);
+      xs.push(x);
+    }
+
+    xs.pop();
+
+    _this.coll = xs;
+
+  });
 
   return this;
 }
 
 var Emma = {
-  create: function(xs, f) {
-    var
-      newEmma = Object.create(Emma.prototype),
-      isArr = util.isArray;
+  create: function(xs, g) {
+    var newEmma = Object.create(Emma.prototype),
+        isArr = util.isArray;
 
     newEmma.coll = xs;
-    newEmma.f = f;
-    newEmma.acc = [];
+    newEmma.g = g;
+    newEmma.ops = [];
 
     if (!isArr(xs)) {
       newEmma.coll = [xs];
@@ -136,9 +241,14 @@ var Emma = {
     realize: realize,
     r: realize,
     take: take,
-    eq: eq,
-    all: all,
-    takeWhile: takeWhile
+    takeWhile: takeWhile,
+    distinct: distinct,
+    filter: filter,
+    rest: rest,
+    interleave: interleave,
+    interpose: interpose,
+    drop: drop,
+    dropWhile: dropWhile
   }
 };
 
@@ -173,16 +283,15 @@ var Emma = {
  *          return x + 1;
  *       });
  */
-module.exports = function(xs, f) {
-  var
-    isFn = util.isFunction,
-    isArr = util.isArray,
-    isStr = util.isString,
-    isNum = util.isNumber;
+module.exports = function(xs, g) {
+  var isFn = util.isFunction,
+      isArr = util.isArray,
+      isStr = util.isString,
+      isNum = util.isNumber;
 
-  if (isFn(f) && (isArr(xs) || isStr(xs) || isNum(xs))) {
-    return Emma.create(xs, f);
-  } else if (isArr(xs) && f === undefined) {
+  if (isFn(g) && (isArr(xs) || isStr(xs) || isNum(xs))) {
+    return Emma.create(xs, g);
+  } else if (isArr(xs) && g === undefined) {
     return Emma.create(xs);
   } else {
     throw new Error('Invalid function signature.');

@@ -47,9 +47,8 @@ exports.conj = function(test) {
 exports.take = function(test) {
   var coll = e([1, 2, 3]);
 
-  test.same([1], coll.take(1).r().eq());
-  test.same([2, 3], coll.take(2).r().eq(1));
-  test.same([1, 2, 3], e([1]).conj(2, 3, 4, 5).take(3).r().eq());
+  test.same([1, 2], coll.take(2).r().coll);
+  test.same([1], coll.take(1).r().coll);
 
   test.done();
 };
@@ -57,15 +56,14 @@ exports.take = function(test) {
 exports.takeWhile = function(test) {
   var coll = e([1, 2, 3]),
       f1 = function(x) {
-        return x <= 1;
+        return x <= 2;
       },
       f2 = function(x) {
-        return x <= 10;
+        return x <= 1;
       };
 
-  test.same([1], coll.takeWhile(f1).r().eq());
-  test.same([2, 3], coll.takeWhile(f2).r().eq(1));
-  test.same([], coll.takeWhile(f1).r().eq(2));
+  test.same([1, 2], coll.takeWhile(f1).r().coll);
+  test.same([1], coll.takeWhile(f2).r().coll);
 
   test.done();
 };
@@ -105,5 +103,24 @@ exports.interpose = function(test) {
   test.same([1, ';', 2, ';', 3],
             coll.interpose(';').r().coll);
 
+  test.done();
+};
+
+exports.dropWhile = function(test) {
+  var coll = e([-2, -1, 0, 1, 2, 3]),
+      isNegative = function(x) {
+        return x < 0;
+      };
+
+  test.same([0, 1, 2, 3], coll.dropWhile(isNegative).r().coll);
+
+  test.done();
+};
+
+exports.drop = function(test) {
+  var coll = e([1, 2, 3, 4, 5]);
+
+  test.same([3, 4, 5], coll.drop(2).r().coll);
+  test.same([0, 4, 5], coll.drop(1).cons(0).r().coll);
   test.done();
 };
