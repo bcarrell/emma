@@ -10,10 +10,12 @@ evaluate your chain when desired through a `realize()` function.
 ### Example Usage
 ```
 var e = require('emma');
+```
 
-console.log(e([1, 2, 3, 4, 5]).cons(0).conj(6).interpose('x').realize().coll);
+```
+e([1, 2, 3, 4, 5]).cons(0).conj(6).interpose('x').realize().coll
 
-// [0, 'x', 1, 'x', 2, 'x', 3, 'x', 4, 'x', 5]
+// [0, 'x', 1, 'x', 2, 'x', 3, 'x', 4, 'x', 5, 'x', 6]
 ```
 
 # Fresh paint, more to come.

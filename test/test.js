@@ -124,3 +124,12 @@ exports.drop = function(test) {
   test.same([0, 4, 5], coll.drop(1).cons(0).r().coll);
   test.done();
 };
+
+exports.testReadme = function(test) {
+  var coll = e([1, 2, 3, 4, 5]);
+
+  test.same([0, 'x', 1, 'x', 2, 'x', 3, 'x', 4, 'x', 5, 'x', 6],
+            coll.cons(0).conj(6).interpose('x').r().coll);
+
+  test.done();
+};
