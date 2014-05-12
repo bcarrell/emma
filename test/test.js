@@ -93,6 +93,8 @@ exports.interleave = function(test) {
 
   test.same([1, 'test', 2, 'test2'],
             coll.interleave(['test', 'test2']).r().coll);
+  test.same([1, '2', 'three'],
+            e([1, 2, 3, 4]).interleave(['2'], ['three', 'four']).r().coll);
 
   test.done();
 };

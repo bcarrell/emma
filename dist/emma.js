@@ -1,6 +1,6 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 /**
- * Emma: functional tools
+ * Emma: functional toolkit
  *
  * Emma may be freely distributed under the MIT license.
  * https://github.com/bcarrell/emma
@@ -11,9 +11,8 @@
 // FIXME
 /*jshint unused: false */
 
-/**
- * Internal utilities
- */
+// ============================================================================
+// Internal utilities
 
 var ArrProto = Array.prototype;
 var ObjProto = Object.prototype;
@@ -33,18 +32,30 @@ var util = {
   },
   isNumber: function(x) {
     return typeof x === 'number';
-  }
+  },
+  slice: function(xs) {
+    return Array.prototype.slice.call(xs);
+  },
+  lengths: function(xs) {
+    return xs.map(function(arr) {
+      return arr.length;
+    });
+  },
+  shortest: function() {
+    var arr = this.slice(arguments);
+
+    return Math.min.apply(null, this.lengths(arr));
+  },
+
 };
 
 function addOp(context, f) {
   context.ops.push(f);
 }
 
-/**
- * External utilities
- */
+// ============================================================================
+// External utilities
 
-// terminates chain
 function realize() {
   var _this = this,
       len = this.ops.length;
@@ -57,42 +68,59 @@ function realize() {
   this.ops = [];
 
   return this;
+}
 
+
+// ============================================================================
+// Sequence fns
+
+/**
+ * Inserts elements at the end of the Array.
+ *
+ * @return {Object}
+ */
+function conj() {
+  var _this = this,
+    args = arguments;
+
+  addOp(this, function() {
+    _this.coll.push.apply(_this.coll, args);
+  });
+
+  return this;
 }
 
 /**
- * Sequence functions
+ * Inserts elements at the beginning of the Array.
+ *
+ * @return {Object}
  */
-
-function conj() {
-  var _this = this,
-      args = arguments;
-
-  addOp(this, function() {
-    ArrProto.push.apply(_this.coll, args);
-  });
-
-  return this;
-}
-
 function cons() {
   var _this = this,
-      args = arguments;
+    args = arguments;
 
   addOp(this, function() {
-    ArrProto.unshift.apply(_this.coll, args);
+    _this.coll.unshift.apply(_this.coll, args);
   });
 
   return this;
 }
 
-function _takeWhile(context, f) {
-  var _g = context.g,
-      xs = [],
-      coll = ArrProto.slice.call(context.coll),
-      len = coll.length,
-      next,
-      i;
+/**
+ * Takes elements from the beginning of a collection as decided by a given
+ * predicate function.  The taken elements become the new collection.
+ *
+ * Internal function.
+ *
+ * @param {Array} coll the collection to take from
+ * @param {Function} f predicate function
+ * @return {Array} xs the `taken` results
+ */
+function _takeWhile(coll, f) {
+  var xs = [],
+    len = coll.length,
+    next,
+    i;
 
   for (i = 0; i < len; i++) {
     next = coll[i];
@@ -104,50 +132,77 @@ function _takeWhile(context, f) {
   return xs;
 }
 
+/**
+ * Public function, defers to _takeWhile().
+ *
+ * @param {Function} f predicate function
+ * @return {Object} this
+ */
 function takeWhile(f) {
   var _this = this;
 
   addOp(this, function() {
-    var xs = _takeWhile(_this, f);
+    var xs = _takeWhile(_this.coll, f);
 
     _this.coll = xs;
   });
 
   return this;
-
 }
 
+/**
+ * Takes x number of elements starting from the beginning of the collection.
+ *
+ * @param {Number} x the number of elements to take
+ * @return {Object} this
+ */
 function take(x) {
   return takeWhile.call(this, function(_, i) {
     return x >= (i + 1);
   });
 }
 
+/**
+ * Removes elements from the beginning of the Array based on a predicate.
+ *
+ * @param {Function} f predicate function
+ * @return {Object} this
+ */
 function dropWhile(f) {
   var _this = this;
 
   addOp(this, function() {
-    var xs = _takeWhile(_this, f),
-        coll = ArrProto.slice.call(_this.coll, xs.length);
+    var xs = _takeWhile(_this.coll, f),
+      coll = _this.coll.slice(xs.length);
 
     _this.coll = coll;
   });
 
   return this;
-
 }
 
+/**
+ * Removes x number of elements from the beginning of the Array.
+ *
+ * @param {Number} x
+ * @return {Object} this
+ */
 function drop(x) {
   return dropWhile.call(this, function(_, i) {
     return x >= (i + 1);
   });
 }
 
+/**
+ * Removes all duplicates from the Array as decided by a strict comparison.
+ *
+ * @return {Object} this
+ */
 function distinct() {
   var _this = this;
 
   addOp(this, function() {
-    _this.coll = ArrProto.filter.call(_this.coll, function(el, pos, self) {
+    _this.coll = _this.coll.filter(function(el, pos, self) {
       return ArrProto.indexOf.call(self, el) === pos;
     });
   });
@@ -155,6 +210,12 @@ function distinct() {
   return this;
 }
 
+/**
+ * Filters elements from the Array as decided by a predicate function.
+ *
+ * @param {Function} f predicate function
+ * @return {Object} this
+ */
 function filter(f) {
   var _this = this;
 
@@ -167,36 +228,66 @@ function filter(f) {
   return this;
 }
 
+/**
+ * Returns the tail of the Array (all elements except the first).
+ *
+ * @return {Object} this
+ */
 function rest() {
   var _this = this;
 
   addOp(this, function() {
-    ArrProto.shift.call(_this.coll);
+    _this.coll.shift();
   });
 
   return this;
 }
 
-function interleave(xs) {
-  var _this = this;
+/**
+ * Returns a new Array with an element of the first Array, then an element of
+ * the second Array, etc.  Will exhaust when an array is empty.
+ *
+ * @return {Object} this
+ */
+function interleave() {
+  var _this = this,
+    arrs = util.slice(arguments),
+    len = arrs.length,
+    shortest,
+    i;
+
+  // confirm all Arrays
+  for (i = 0; i < len; i++) {
+    if (!util.isArray(arrs[i])) {
+      throw new Error('Invalid function signature.');
+    }
+  }
+
+  shortest = util.shortest.apply(util, arrs);
 
   addOp(this, function() {
-    var i,
-        coll = _this.coll,
-        len = xs.length,
-        ys = [];
+    var coll = [],
+      i;
 
-    for (i = 0; i < len; i++) {
-      ys.push(coll[i]);
-      ys.push(xs[i]);
+    for (i = 0; i < shortest; i++) {
+      coll.push(_this.coll[i]);
+      arrs.forEach(function(arr) {
+        coll.push(arr[i]);
+      });
     }
 
-    _this.coll = ys;
+    _this.coll = coll;
   });
 
   return this;
 }
 
+/**
+ * Inserts `x` between all elements of the collection.
+ *
+ * @param {(Number|String)} x
+ * @return {Object} this
+ */
 function interpose(x) {
   var _this = this;
 
@@ -220,10 +311,11 @@ function interpose(x) {
   return this;
 }
 
+
 var Emma = {
   create: function(xs, g) {
     var newEmma = Object.create(Emma.prototype),
-        isArr = util.isArray;
+      isArr = util.isArray;
 
     newEmma.coll = xs;
     newEmma.g = g;
@@ -285,9 +377,9 @@ var Emma = {
  */
 module.exports = function(xs, g) {
   var isFn = util.isFunction,
-      isArr = util.isArray,
-      isStr = util.isString,
-      isNum = util.isNumber;
+    isArr = util.isArray,
+    isStr = util.isString,
+    isNum = util.isNumber;
 
   if (isFn(g) && (isArr(xs) || isStr(xs) || isNum(xs))) {
     return Emma.create(xs, g);
